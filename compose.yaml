@@ -27,7 +27,7 @@ services:
   command:
    - /etc/pingtest/run.ps1
   dns:
-   - "10.10.10.253"
+   - "<DNS Server IP>"
 
  mysql:
   image: mysql
@@ -59,4 +59,4 @@ volumes:
   driver_opts:
       o: bind
       type: none
-      device: /home/mike/dev/www_files
+      device: <folder location on docker host>
