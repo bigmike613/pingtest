@@ -60,3 +60,5 @@ volumes:
       o: bind
       type: none
       device: <folder location on docker host>
+      
+      # place a file BG.jpg in the folder above to set a background for the dashboard.
