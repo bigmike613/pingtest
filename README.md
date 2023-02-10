@@ -1,7 +1,7 @@
 # pingtest
-A lightweight dashboard to show ping results.
+A docker based web app that shows the ICMP ping status of devices.
 
-A lightweight dashboard of ping results. It pulls devices from a mysql database, pings them once per minute and returns the result on a webpage.
+It pulls devices from a mysql database, pings them once per minute and returns the result on a webpage.
 It also shows any devices that were down at least once in the last hour. note that only devices that are down are shown. 
 
 Setup:
