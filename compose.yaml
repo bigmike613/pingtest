@@ -1,0 +1,62 @@
+version: "3.7"
+
+services:
+ web:
+  image: nginx
+  ports:
+   - 80:80
+  networks:
+   - backend
+  restart: always
+  volumes:
+   - pingtest_vol:/usr/share/nginx/html
+  container_name: PingTest_nginx
+
+ pwsh:
+  image: miketomasulo/pingtest:latest
+  networks:
+   - backend
+  restart: always
+  volumes:
+   - pingtest_vol:/etc/pingtest_web
+  environment:
+   -  "TZ=America/New_York"
+  container_name: PingTest_pwsh
+  entrypoint:
+   - /usr/bin/pwsh
+  command:
+   - /etc/pingtest/run.ps1
+  dns:
+   - "10.10.10.253"
+
+ mysql:
+  image: mysql
+  networks:
+   - backend
+  command: --default-authentication-plugin=mysql_native_password
+  restart: always
+  environment:
+   -  "MYSQL_ROOT_PASSWORD=StartupPassDoNotChange"
+   -  "TZ=America/New_York"
+  container_name: PingTest_mysql
+
+ adminer:
+    image: miketomasulo/adminer:latest
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+     - backend
+    container_name: PingTest_adminer
+
+
+
+networks:
+ backend: {}
+volumes:
+ pingtest_vol:
+  driver: local
+  driver_opts:
+      o: bind
+      type: none
+      device: /home/mike/dev/www_files
