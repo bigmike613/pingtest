@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
  web:
-  image: nginx
+  image: miketomasulo/nginx:latest
   ports:
    - 80:80
   networks:
@@ -27,7 +27,7 @@ services:
   command:
    - /etc/pingtest/run.ps1
   dns:
-   - "<DNS Server IP>"
+   - "10.10.10.253"
 
  mysql:
   image: mysql
@@ -35,6 +35,8 @@ services:
    - backend
   command: --default-authentication-plugin=mysql_native_password
   restart: always
+  volumes:
+  - pingtest_vol_mysql:/var/lib/mysql
   environment:
    -  "MYSQL_ROOT_PASSWORD=StartupPassDoNotChange"
    -  "TZ=America/New_York"
@@ -43,11 +45,16 @@ services:
  adminer:
     image: miketomasulo/adminer:latest
     restart: always
-    ports:
-      - 8080:8080
     networks:
      - backend
     container_name: PingTest_adminer
+
+ chart:
+    image: miketomasulo/chart:dev
+    restart: always
+    networks:
+     - backend
+    container_name: PingTest_chart
 
 
 
@@ -55,10 +62,5 @@ networks:
  backend: {}
 volumes:
  pingtest_vol:
-  driver: local
-  driver_opts:
-      o: bind
-      type: none
-      device: <folder location on docker host>
-      
-      # place a file BG.jpg in the folder above to set a background for the dashboard.
+ pingtest_vol_mysql:
+
