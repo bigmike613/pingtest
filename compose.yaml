@@ -5,6 +5,7 @@ services:
   image: miketomasulo/nginx:latest
   ports:
    - 80:80
+   - 443:443
   networks:
    - backend
   restart: always
@@ -21,13 +22,14 @@ services:
    - pingtest_vol:/etc/pingtest_web
   environment:
    -  "TZ=America/New_York"
+   -  "PT_PASS=test12345"
   container_name: PingTest_pwsh
   entrypoint:
    - /usr/bin/pwsh
   command:
    - /etc/pingtest/run.ps1
   dns:
-   - "10.10.10.253"
+   - "8.8.8.8"
 
  mysql:
   image: mysql
@@ -36,7 +38,7 @@ services:
   command: --default-authentication-plugin=mysql_native_password
   restart: always
   volumes:
-  - pingtest_vol_mysql:/var/lib/mysql
+   - pingtest_vol_mysql:/var/lib/mysql
   environment:
    -  "MYSQL_ROOT_PASSWORD=StartupPassDoNotChange"
    -  "TZ=America/New_York"
@@ -45,17 +47,30 @@ services:
  adminer:
     image: miketomasulo/adminer:latest
     restart: always
+    environment:
+     -  "PT_PASS=test12345"
     networks:
      - backend
     container_name: PingTest_adminer
 
  chart:
-    image: miketomasulo/chart:dev
+    image: miketomasulo/chart:latest
     restart: always
     networks:
      - backend
+    environment:
+     -  "PT_PASS=test12345"
     container_name: PingTest_chart
 
+ api:
+    image: miketomasulo/api:latest
+    restart: always
+    environment:
+     -  "PT_PASS=test12345"
+     -  "apikey=test12345"
+    networks:
+     - backend
+    container_name: PingTest_api
 
 
 networks:
@@ -63,4 +78,4 @@ networks:
 volumes:
  pingtest_vol:
  pingtest_vol_mysql:
-
+ 
