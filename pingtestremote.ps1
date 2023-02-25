@@ -7,7 +7,7 @@ $srv2="http://$srv/api/api2.php"
 $request=@{poll_id=$poll_id;apikey=$apikey}
 write-host $request $srv1 $srv2
 while(1 -eq 1){
-$dataj = invoke-webrequest -uri $srv1 -method get -body $request 
+$dataj = invoke-webrequest -uri $srv1 -method post -body $request 
 
 $data = $dataj | convertfrom-json
 $results=@()
