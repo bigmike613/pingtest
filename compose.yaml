@@ -30,6 +30,7 @@ services:
    - /etc/pingtest/run.ps1
   dns:
    - "8.8.8.8"
+  privileged: TRUE
 
  mysql:
   image: mysql
