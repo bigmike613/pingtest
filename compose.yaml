@@ -8,7 +8,6 @@ services:
    - 443:443
   networks:
    - backend
-  restart: always
   volumes:
    - pingtest_vol:/usr/share/nginx/html
   container_name: PingTest_nginx
@@ -17,7 +16,6 @@ services:
   image: miketomasulo/pingtest:latest
   networks:
    - backend
-  restart: always
   volumes:
    - pingtest_vol:/etc/pingtest_web
   environment:
@@ -37,7 +35,6 @@ services:
   networks:
    - backend
   command: --default-authentication-plugin=mysql_native_password
-  restart: always
   volumes:
    - pingtest_vol_mysql:/var/lib/mysql
   environment:
@@ -47,7 +44,6 @@ services:
 
  adminer:
     image: miketomasulo/adminer:latest
-    restart: always
     environment:
      -  "PT_PASS=test12345"
     networks:
@@ -56,7 +52,6 @@ services:
 
  chart:
     image: miketomasulo/chart:latest
-    restart: always
     networks:
      - backend
     environment:
@@ -65,7 +60,6 @@ services:
 
  api:
     image: miketomasulo/api:latest
-    restart: always
     environment:
      -  "PT_PASS=test12345"
      -  "apikey=test12345"
