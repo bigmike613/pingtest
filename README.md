@@ -9,6 +9,6 @@ Setup:
 1. create docker containers from compose.yaml
 2. add devices - go to http(s)://containerurl/admin , login with the default password of admin/PingTest!!
 3. adjust settings as needed
-4. (optional) setup SSL. copy files in the "ssl-config" folder to container host and run addssl.sh
+4. (optional) setup SSL. copy files in the "Config_Scripts/ssl-config" folder to container host and run addssl.sh
 
 <img src="https://github.com/bigmike613/pingtest/blob/d921cc28ead6c0c543d2d0ca70bd8838843100a7/pingtest.png">
