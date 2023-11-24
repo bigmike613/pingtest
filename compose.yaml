@@ -20,7 +20,7 @@ services:
    - pingtest_vol:/etc/pingtest_web
   environment:
    -  "TZ=America/New_York"
-   -  "PT_PASS=test12345"
+   -  "PT_PASS=putYourPasswordHere"
   container_name: PingTest_pwsh
   entrypoint:
    - /usr/bin/pwsh
@@ -45,7 +45,7 @@ services:
  adminer:
     image: miketomasulo/adminer:latest
     environment:
-     -  "PT_PASS=test12345"
+     -  "PT_PASS=putYourPasswordHere"
     networks:
      - backend
     container_name: PingTest_adminer
@@ -55,14 +55,14 @@ services:
     networks:
      - backend
     environment:
-     -  "PT_PASS=test12345"
+     -  "PT_PASS=putYourPasswordHere"
     container_name: PingTest_chart
 
  api:
     image: miketomasulo/api:latest
     environment:
-     -  "PT_PASS=test12345"
-     -  "apikey=test12345"
+     -  "PT_PASS=putYourPasswordHere"
+     -  "apikey=putYourPasswordHere"
     networks:
      - backend
     container_name: PingTest_api
