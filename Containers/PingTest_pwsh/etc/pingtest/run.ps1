@@ -61,7 +61,7 @@ $psCred = New-Object System.Management.Automation.PSCredential -ArgumentList ($u
 
 
 open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
-$result = Test-Connection -ComputerName $device.ip -quiet -Count 1 -timeout 1
+$result = Test-Connection -ComputerName $device.ip -quiet -Count 2 -timeout 1
 if ($result)
 {
 #-----------first ping passes
@@ -69,30 +69,15 @@ if ($result)
 
 #write-host $device.devicename
 $query = "insert into results (devicename,status) values ('" + $device.devicename + "',true);"
+invoke-Sqlupdate -Query $query
 #write-host "true update"
-invoke-Sqlupdate -Query $query
-
-}
-else
-{
-#-----------first ping fails // second ping test
-$result2 = Test-Connection -ComputerName $device.ip -quiet -Count 1 -timeout 1
-if($result2){
-#-----------second ping passes
-$query = "insert into results (devicename,status) values ('" + $device.devicename + "',true);"
-invoke-Sqlupdate -Query $query
-}
-else{
-#----------second ping fails
-#write-host $device.devicename " Does not ping"
-
+}else{
 $query = "insert into results (devicename,status) values ('" + $device.devicename + "',false);"
 #write-host "false update"
 invoke-Sqlupdate -Query $query
 }
-}
 close-sqlconnection
-} -ThrottleLimit 255
+} -ThrottleLimit 2000
 open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
 
 $queryall="SELECT DISTINCT results.devicename, results.status, results.time
