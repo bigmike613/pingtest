@@ -1,9 +1,13 @@
 write-host "RUN FILE START"
 import-module simplysql
 $PT_PASS=$env:PT_PASS
+$username = "mike"
+$password = ConvertTo-SecureString $PT_PASS -AsPlainText -Force
+$psCred = New-Object System.Management.Automation.PSCredential -ArgumentList ($username, $password)
+
 #$logfile = /root/log.txt
 try{
-open-mysqlconnection -server mysql -user mike -pass $PT_PASS -sslmode required -database ALERTING 
+open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING 
 
 }
 catch {
@@ -42,12 +46,21 @@ $i=0
 while ($i -lt 5){
   write-host "RUN LOOP START"
 
-open-mysqlconnection -server mysql -user mike -pass $PT_PASS -sslmode required -database ALERTING 
+open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING 
 
 $devices = invoke-sqlquery -query "select * from devices where poll_id='' or poll_id='1' or poll_id is null;"
 #$devices | out-file $logfile
-foreach ($device in $devices){
+$devices | % -parallel {
 #---------first ping test
+$device=$_
+import-module simplysql
+$PT_PASS=$env:PT_PASS
+$username = "mike"
+$password = ConvertTo-SecureString $PT_PASS -AsPlainText -Force
+$psCred = New-Object System.Management.Automation.PSCredential -ArgumentList ($username, $password)
+
+
+open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
 $result = Test-Connection -ComputerName $device.ip -quiet -Count 1 -timeout 1
 if ($result)
 {
@@ -78,7 +91,9 @@ $query = "insert into results (devicename,status) values ('" + $device.devicenam
 invoke-Sqlupdate -Query $query
 }
 }
-}
+close-sqlconnection
+} -ThrottleLimit 255
+open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
 
 $queryall="SELECT DISTINCT results.devicename, results.status, results.time
 FROM
@@ -281,7 +296,6 @@ close-sqlconnection
 write-host "sleep 1 minute"
 start-sleep 60
 write-host "RUN LOOP END"
-
 
 }
 
