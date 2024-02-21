@@ -1,5 +1,5 @@
-write-host "RUN FILE START"
-import-module simplysql
+Write-Host "RUN FILE START"
+Import-Module simplysql
 $PT_PASS = $env:PT_PASS
 $username = "mike"
 $password = ConvertTo-SecureString $PT_PASS -AsPlainText -Force
@@ -7,14 +7,14 @@ $psCred = New-Object System.Management.Automation.PSCredential -ArgumentList ($u
 
 #$logfile = /root/log.txt
 try {
-  open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING 
+  Open-MySqlConnection -server mysql -cred $psCred -sslmode required -database ALERTING
 }
 catch {
-  write-host "sql db not configured, configuring."
+  Write-Host "sql db not configured, configuring."
   Copy-Item /etc/pingtest/bad.ico -Destination /etc/pingtest_web/bad.ico
   Copy-Item /etc/pingtest/good.ico -Destination /etc/pingtest_web/good.ico
-  start-sleep 30
-  open-mysqlconnection -server mysql -user root -pass 'StartupPassDoNotChange' -sslmode required
+  Start-Sleep 30
+  Open-MySqlConnection -server mysql -user root -pass 'StartupPassDoNotChange' -sslmode required
   $query = "create user 'mike'@'%' identified by '$PT_PASS';alter user 'root'@'localhost' identified by '$PT_PASS';create database ALERTING;
 use ALERTING;
 grant all privileges on ALERTING.* to 'mike'@'%';
@@ -37,48 +37,32 @@ ON SCHEDULE EVERY 1 hour
 DO
   DELETE FROM results
   WHERE devicename NOT IN (SELECT devicename FROM devices);"
-  invoke-Sqlupdate -Query $query
-  close-sqlconnection
+  Invoke-SqlUpdate -Query $query
+  Close-SqlConnection
+  
+  #open connection to created database
+  Open-MySqlConnection -server mysql -cred $psCred -sslmode required -database ALERTING
 }
-close-sqlconnection
-$i = 0
-while ($i -lt 5) {
-  write-host "RUN LOOP START"
 
-  open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING 
+#use while($true) instead of a variable that doesn't increment.
+while ($true) {
+  Write-Host "RUN LOOP START"
 
-  $devices = invoke-sqlquery -query "select * from devices where poll_id='' or poll_id='1' or poll_id is null;"
+  $devices = Invoke-SqlQuery -query "select * from devices where poll_id='' or poll_id='1' or poll_id is null;"
   #$devices | out-file $logfile
-  $devices | % -parallel {
+  $devices | ForEach-Object -parallel {
     #---------first ping test
     $device = $_
-    import-module simplysql
-    $PT_PASS = $env:PT_PASS
-    $username = "mike"
-    $password = ConvertTo-SecureString $PT_PASS -AsPlainText -Force
-    $psCred = New-Object System.Management.Automation.PSCredential -ArgumentList ($username, $password)
+    $cn = "conn-{0}" -f $device.devicename  #create unique connection name
+    $query = "insert into results (devicename,status) values (@deviceName, @status)"
 
-
-    open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
     $result = Test-Connection -ComputerName $device.ip -quiet -Count 2 -timeout 1
-    if ($result) {
-      #-----------first ping passes
-      #write-host $device.devicename " pings"
-
-      #write-host $device.devicename
-      $query = "insert into results (devicename,status) values ('" + $device.devicename + "',true);"
-      invoke-Sqlupdate -Query $query
-      #write-host "true update"
-    }
-    else {
-      $query = "insert into results (devicename,status) values ('" + $device.devicename + "',false);"
-      #write-host "false update"
-      invoke-Sqlupdate -Query $query
-    }
-    close-sqlconnection
+    
+    Open-MySqlConnection -server mysql -cred $psCred -sslmode required -database ALERTING -ConnectionName $cn
+    Invoke-SqlUpdate -Query $query -Parameters @{deviceName = $device.devicename; status = $result.ToString().ToLower()} -ConnectionName $cn
+    Close-SqlConnection -ConnectionName $cn
   } -ThrottleLimit 2000
-  open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
-
+  
   $queryall = "SELECT DISTINCT results.devicename, results.status, results.time
 FROM
     (SELECT devicename, MAX(time) AS time
@@ -113,17 +97,14 @@ FROM
 JOIN results ON max_time.devicename = results.devicename AND max_time.time = results.time
 WHERE results.status = 0 AND results.time > DATE_SUB(NOW(), INTERVAL 2 minute);"
 
-
-
-
-  $title = invoke-sqlquery -query "select setting_value from settings where setting='title';"
+  $title = Invoke-SqlQuery -query "select setting_value from settings where setting='title';"
   $title = $title[0].tostring()
-  $bgcolor = invoke-sqlquery -query "select setting_value from settings where setting='bg_color';"
+  $bgcolor = Invoke-SqlQuery -query "select setting_value from settings where setting='bg_color';"
   $bgcolor = $bgcolor[0].tostring()
   $goodicon = "<link rel='icon' type='image/x-icon' href='good.ico'>"
   $badicon = "<link rel='icon' type='image/x-icon' href='bad.ico'>"
 
-  $countbad = invoke-sqlquery -query $querycountdown
+  $countbad = Invoke-SqlQuery -query $querycountdown
 
   if ($countbad[0] -gt 0) {
     $head = "<head>
@@ -191,7 +172,7 @@ font-size:20px;
 </script>
 </head>"
 
-  $timenow = invoke-sqlquery -query "select now();"
+  $timenow = (Get-Date) #invoke-sqlquery -query "select now();"
   $timenow = $timenow[0].tostring()
   $body = "
 <body style=`"background-image: url('BG.jpg'); background-size: 100% 100%; background-color:$bgcolor;`">
@@ -228,31 +209,31 @@ font-size:20px;
   $end = "
 </body>
 </html>"
-  $devices = invoke-sqlquery -query "select * from devices;"
+  $devices = Invoke-SqlQuery -query "select * from devices;"
   if ($null -eq $Devices) {
-    write-host "no devices"
+    Write-Host "no devices"
     $head + $body + "<p align=center>There are currenlty no devices configured.<br> go to this site /admin to configure devices.<br><br>Default Username:admin<br>Default Password:PingTest!!</p>" + $end | Out-File /etc/pingtest_web/index.html
   }
   else {
-    write-host "down query"
-    $showup = invoke-sqlquery -query "select setting_value from settings where setting='show_up_devices';"
+    Write-Host "down query"
+    $showup = Invoke-SqlQuery -query "select setting_value from settings where setting='show_up_devices';"
     if ($null -eq $showup) {
-      $resultsdown = invoke-sqlquery -query $queryalldown
-      write-host "no sql settings for show up"
+      $resultsdown = Invoke-SqlQuery -query $queryalldown
+      Write-Host "no sql settings for show up"
     }
     elseif ($showup[0] -eq 1) {
-      write-host "sql settings for show up TRUE"
-      $resultsdown = invoke-sqlquery -query $queryall
+      Write-Host "sql settings for show up TRUE"
+      $resultsdown = Invoke-SqlQuery -query $queryall
     }
     else {
-      write-host "sql settings for show up FALSE"
-      $resultsdown = invoke-sqlquery -query $queryalldown
+      Write-Host "sql settings for show up FALSE"
+      $resultsdown = Invoke-SqlQuery -query $queryalldown
     }
 
-    write-host "hour query"
-    $resultshour = invoke-sqlquery -query $querylasthourdown
-    $tabledown = $resultsdown | sort-object -property status | ConvertTo-Html -As Table -Property status, devicename, time -fragment | foreach {
-      $PSItem -replace "<tr><td>True</td>", "<tr style='background-color:#008000'><td>Up</td>" } | foreach {
+    Write-Host "hour query"
+    $resultshour = Invoke-SqlQuery -query $querylasthourdown
+    $tabledown = $resultsdown | Sort-Object -property status | ConvertTo-Html -As Table -Property status, devicename, time -fragment | ForEach-Object {
+      $PSItem -replace "<tr><td>True</td>", "<tr style='background-color:#008000'><td>Up</td>" } | ForEach-Object {
       $PSItem -replace "<tr><td>False</td>", "<tr style='background-color:#ff0000'><td>Down</td>"
     }
     $tabledown = $tabledown -replace "<table>", "<div class=`"row`"><div class=`"column`"><p align=center><b>Devices Down Now</b></p><table>"
@@ -261,8 +242,8 @@ font-size:20px;
     $tabledown = $tabledown -replace "status", "Latest Status"
     $tabledown = $tabledown -replace "devicename", "Device Name"
 
-    $tablehour = $resultshour | sort-object -property status | ConvertTo-Html -As Table -Property status, devicename, time -fragment | foreach {
-      $PSItem -replace "<tr><td>True</td>", "<tr style='background-color:#008000'><td>Up</td>" } | foreach {
+    $tablehour = $resultshour | Sort-Object -property status | ConvertTo-Html -As Table -Property status, devicename, time -fragment | ForEach-Object {
+      $PSItem -replace "<tr><td>True</td>", "<tr style='background-color:#008000'><td>Up</td>" } | ForEach-Object {
       $PSItem -replace "<tr><td>False</td>", "<tr style='background-color:#ff0000'><td>Down</td>"
     }
 
@@ -275,10 +256,10 @@ font-size:20px;
 
     $head + $body + $tabledown + $tablehour + $end | Out-File /etc/pingtest_web/index.html
   }
-  close-sqlconnection
-  write-host "sleep 1 minute"
-  start-sleep 60
-  write-host "RUN LOOP END"
+  Close-SqlConnection
+  Write-Host "sleep 1 minute"
+  Start-Sleep 60
+  Write-host "RUN LOOP END"
 
 }
 
