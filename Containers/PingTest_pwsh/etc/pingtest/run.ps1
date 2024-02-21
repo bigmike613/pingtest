@@ -48,7 +48,7 @@ DO
 while ($true) {
   Write-Host "RUN LOOP START"
 
-  $devices = Invoke-SqlQuery -query "select * from devices where poll_id='' or poll_id='1' or poll_id is null;"
+  $devices = Invoke-SqlQuery -query "select * from devices where poll_id='' or poll_id='1' or poll_id is null;" -Stream
   #$devices | out-file $logfile
   $devices | ForEach-Object -parallel {
     #---------first ping test
@@ -97,14 +97,14 @@ FROM
 JOIN results ON max_time.devicename = results.devicename AND max_time.time = results.time
 WHERE results.status = 0 AND results.time > DATE_SUB(NOW(), INTERVAL 2 minute);"
 
-  $title = Invoke-SqlQuery -query "select setting_value from settings where setting='title';"
+  $title = Invoke-SqlQuery -query "select setting_value from settings where setting='title';" -Stream
   $title = $title[0].tostring()
-  $bgcolor = Invoke-SqlQuery -query "select setting_value from settings where setting='bg_color';"
+  $bgcolor = Invoke-SqlQuery -query "select setting_value from settings where setting='bg_color';" -Stream
   $bgcolor = $bgcolor[0].tostring()
   $goodicon = "<link rel='icon' type='image/x-icon' href='good.ico'>"
   $badicon = "<link rel='icon' type='image/x-icon' href='bad.ico'>"
 
-  $countbad = Invoke-SqlQuery -query $querycountdown
+  $countbad = Invoke-SqlQuery -query $querycountdown -Stream
 
   if ($countbad[0] -gt 0) {
     $head = "<head>
@@ -209,29 +209,29 @@ font-size:20px;
   $end = "
 </body>
 </html>"
-  $devices = Invoke-SqlQuery -query "select * from devices;"
+  $devices = Invoke-SqlQuery -query "select * from devices;" -Stream
   if ($null -eq $Devices) {
     Write-Host "no devices"
     $head + $body + "<p align=center>There are currenlty no devices configured.<br> go to this site /admin to configure devices.<br><br>Default Username:admin<br>Default Password:PingTest!!</p>" + $end | Out-File /etc/pingtest_web/index.html
   }
   else {
     Write-Host "down query"
-    $showup = Invoke-SqlQuery -query "select setting_value from settings where setting='show_up_devices';"
+    $showup = Invoke-SqlQuery -query "select setting_value from settings where setting='show_up_devices';" -Stream
     if ($null -eq $showup) {
-      $resultsdown = Invoke-SqlQuery -query $queryalldown
+      $resultsdown = Invoke-SqlQuery -query $queryalldown -Stream
       Write-Host "no sql settings for show up"
     }
     elseif ($showup[0] -eq 1) {
       Write-Host "sql settings for show up TRUE"
-      $resultsdown = Invoke-SqlQuery -query $queryall
+      $resultsdown = Invoke-SqlQuery -query $queryall -Stream
     }
     else {
       Write-Host "sql settings for show up FALSE"
-      $resultsdown = Invoke-SqlQuery -query $queryalldown
+      $resultsdown = Invoke-SqlQuery -query $queryalldown -Stream
     }
 
     Write-Host "hour query"
-    $resultshour = Invoke-SqlQuery -query $querylasthourdown
+    $resultshour = Invoke-SqlQuery -query $querylasthourdown -Stream
     $tabledown = $resultsdown | Sort-Object -property status | ConvertTo-Html -As Table -Property status, devicename, time -fragment | ForEach-Object {
       $PSItem -replace "<tr><td>True</td>", "<tr style='background-color:#008000'><td>Up</td>" } | ForEach-Object {
       $PSItem -replace "<tr><td>False</td>", "<tr style='background-color:#ff0000'><td>Down</td>"
