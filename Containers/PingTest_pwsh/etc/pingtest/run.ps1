@@ -4,18 +4,22 @@ $PT_PASS=$env:PT_PASS
 $username = "mike"
 $password = ConvertTo-SecureString $PT_PASS -AsPlainText -Force
 $psCred = New-Object System.Management.Automation.PSCredential -ArgumentList ($username, $password)
+$usernamer = "root"
+$passwordr = ConvertTo-SecureString "StartupPassDoNotChange" -AsPlainText -Force
+$psCredr = New-Object System.Management.Automation.PSCredential -ArgumentList ($usernamer, $passwordr)
 
 #$logfile = /root/log.txt
 try{
-open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING 
-
+open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING -erroraction stop
+close-sqlconnection
 }
 catch {
 write-host "sql db not configured, configuring."
 Copy-Item /etc/pingtest/bad.ico -Destination /etc/pingtest_web/bad.ico
 Copy-Item /etc/pingtest/good.ico -Destination /etc/pingtest_web/good.ico
 start-sleep 30
-open-mysqlconnection -server mysql -user root -pass 'StartupPassDoNotChange' -sslmode required
+open-mysqlconnection -server mysql -cred $pscredr -sslmode required
+$pwhash='$2y$10$84Sg1IyEvWg9sVeb.VCf1u2RNUJt.CoQSdtro8LknMlkBn/iJCWoW'
 $query="create user 'mike'@'%' identified by '$PT_PASS';alter user 'root'@'localhost' identified by '$PT_PASS';create database ALERTING;
 use ALERTING;
 grant all privileges on ALERTING.* to 'mike'@'%';
@@ -24,7 +28,7 @@ ALTER TABLE ALERTING.devices COMMENT='Devices';
 create table ALERTING.results (devicename varchar(255), status tinyint(1), time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP);
 create table ALERTING.settings (setting varchar(255), setting_value varchar(255));
 insert into ALERTING.settings (setting,setting_value) value ('title','Ping Test Title');
-insert into ALERTING.settings (setting,setting_value) value ('admin_pass','PingTest!!');
+insert into ALERTING.settings (setting,setting_value) value ('admin_hash','$pwhash');
 insert into ALERTING.settings (setting,setting_value) value ('bg_color','#1c87c9');
 insert into ALERTING.settings (setting,setting_value) value ('show_up_devices','0');
 ALTER TABLE ALERTING.settings COMMENT='Settings';
@@ -41,44 +45,54 @@ DO
 invoke-Sqlupdate -Query $query
 close-sqlconnection
 }
-close-sqlconnection
+
 $i=0
 while ($i -lt 5){
   write-host "RUN LOOP START"
 
 open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING 
-
-$devices = invoke-sqlquery -query "select * from devices where poll_id='' or poll_id='1' or poll_id is null;"
+$sqlresult = invoke-sqlquery -query "select * from devices where poll_id='' or poll_id='1' or poll_id is null;"
+close-sqlconnection
+$devices=@()
+foreach ($device in $sqlresult){
+$item = [pscustomobject]@{
+devicename = $device.devicename
+ip = $device.ip
+}
+$devices += $item
+}
 #$devices | out-file $logfile
 $devices | % -parallel {
 #---------first ping test
 $device=$_
-import-module simplysql
-$PT_PASS=$env:PT_PASS
-$username = "mike"
-$password = ConvertTo-SecureString $PT_PASS -AsPlainText -Force
-$psCred = New-Object System.Management.Automation.PSCredential -ArgumentList ($username, $password)
-
-
-open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
-$result = Test-Connection -ComputerName $device.ip -quiet -Count 2 -timeout 1
+$pingable=$false
+$result = Test-Connection -ComputerName $device.ip -quiet -Count 2 -timeout 1 -ErrorAction SilentlyContinue
 if ($result)
 {
 #-----------first ping passes
-#write-host $device.devicename " pings"
-
-#write-host $device.devicename
-$query = "insert into results (devicename,status) values ('" + $device.devicename + "',true);"
-invoke-Sqlupdate -Query $query
-#write-host "true update"
+$pingable=$true
 }else{
-$query = "insert into results (devicename,status) values ('" + $device.devicename + "',false);"
-#write-host "false update"
-invoke-Sqlupdate -Query $query
+# first ping fails, second attempt
+$result2 = Test-Connection -ComputerName $device.ip -quiet -Count 2 -timeout 1 -ErrorAction SilentlyContinue
+if ($result2){
+# second ping passes
+$pingable=$true
+}else{
+# both pings failed
+$pingable=$false
+}
+}
+$_ | Add-Member -MemberType NoteProperty -Name "result" -Value $pingable
+} -ThrottleLimit 2000
+
+open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
+foreach ($device in $devices){
+
+$query = "insert into results (devicename,status) values ('" + $device.devicename + "'," + $device.result + ");"
+#write-host $query
+invoke-Sqlupdate -query $query
 }
 close-sqlconnection
-} -ThrottleLimit 2000
-open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
 
 $queryall="SELECT DISTINCT results.devicename, results.status, results.time
 FROM
@@ -116,7 +130,7 @@ WHERE results.status = 0 AND results.time > DATE_SUB(NOW(), INTERVAL 2 minute);"
 
 
 
-
+open-mysqlconnection -server mysql -cred $psCred -sslmode required -database ALERTING
 $title=invoke-sqlquery -query "select setting_value from settings where setting='title';"
 $title=$title[0].tostring()
 $bgcolor=invoke-sqlquery -query "select setting_value from settings where setting='bg_color';"
@@ -125,6 +139,7 @@ $goodicon="<link rel='icon' type='image/x-icon' href='good.ico'>"
 $badicon="<link rel='icon' type='image/x-icon' href='bad.ico'>"
 
 $countbad = invoke-sqlquery -query $querycountdown
+
 
 if ($countbad[0] -gt 0){
 $head = "<head>
@@ -151,7 +166,11 @@ margin-left: auto;
 margin-right: auto;
 overflow-x:auto;
 }
-tr:hover{
+h1{
+text-shadow: 0 0 15px black;
+color: white;
+}
+tr{
 background-color: #f2f2f2;
 }
 * {
@@ -171,6 +190,8 @@ background-color: #f2f2f2;
 
 p{
 font-size:20px;
+text-shadow: 0 0 15px black;
+color: white;
 }
 
 /* Clearfix (clear floats) */
@@ -232,7 +253,8 @@ $end="
 $devices = invoke-sqlquery -query "select * from devices;"
 if ($null -eq $Devices){
   write-host "no devices"
-$head + $body + "<p align=center>There are currenlty no devices configured.<br> go to this site /admin to configure devices.<br><br>Default Username:admin<br>Default Password:PingTest!!</p>" + $end| Out-File /etc/pingtest_web/index.html
+$head + $body + "<p align=center>There are currenlty no devices configured.<br> go to this site /admin to configure devices.<br><br>Default Username:admin<br>Default Password:PingTest!!
+</p>" + $end| Out-File /etc/pingtest_web/index.html
 }
 else
 {
@@ -283,5 +305,3 @@ start-sleep 60
 write-host "RUN LOOP END"
 
 }
-
-
