@@ -10,12 +10,12 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
   die("Connection failed: " . $conn->connect_error);
 } 
-$sql = "SELECT setting_value FROM settings where setting='admin_pass'";
+$sql = "SELECT setting_value FROM settings where setting='admin_hash'";
 $result = $conn->query($sql);
 if ($result->num_rows > 0) {
   // output data of each row
   while($row = $result->fetch_assoc()) {
-    $pass=$row["setting_value"];
+    $hash=$row["setting_value"];
   }
 } else {
   echo "DB is initializing, try again soon.";
@@ -52,8 +52,15 @@ function adminer_object(){
 		}
 			  function login($login, $password) {
 		  // validate user submitted credentials
-		  global $pass;
-		  return ($login == 'admin' && $password == $pass);
+		  global $hash;
+		  if (password_verify($password, $hash))
+		  {
+			return ($login == 'admin' && TRUE);
+		  }
+		  else {
+			return ($login == 'admin' && FALSE);
+		  }
+		  
 		}
 		 function edithint($table, $field, $value) {
            if ($field['field']=='devicename'){
@@ -90,6 +97,6 @@ function adminer_object(){
 	}
 	return new AdminerSoftware;
 	}
-
+echo '<div align="right"><a href="admin/chpass.html">Change Password</a></div>';
 include './editor.php'
 ?>
