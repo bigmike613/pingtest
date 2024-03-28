@@ -31,7 +31,7 @@ services:
   privileged: TRUE
 
  mysql:
-  image: mysql
+  image: miketomasulo/mysql
   networks:
    - backend
   command: --default-authentication-plugin=mysql_native_password
