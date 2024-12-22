@@ -9,10 +9,16 @@ Setup:
 1. git clone https://github.com/bigmike613/pingtest.git
 2. docker compose up -d
 3. verify 8 containers are running
-4. add devices - go to http://<serverurl>/admin , login with the default password of admin/PingTest!!
-5. Change admin password click "change password" on admin page.
-6. Adjust settings as needed
-7. (optional) setup SSL. run Config_Scripts/ssl.sh.
+
+Setup AWS:
+1. create an instance with at least 4gb or ram
+2. use aws_user_data.txt as the userdata
+
+Configure:   
+1. add devices - go to http://<serverurl>/admin , login with the default password of admin/PingTest!!
+2. Change admin password click "change password" on admin page.
+3. Adjust settings as needed
+4. (optional) setup SSL. run Config_Scripts/ssl.sh.
 
 #Config_Scripts:
 
