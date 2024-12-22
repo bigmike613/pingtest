@@ -1,5 +1,5 @@
 #!/bin/bash
-docker compose build
+docker compose pull
 echo "please create a password for the new install (do not use single, double quotes or *) then press enter."
 read -e usrpass
 sed -i "s*putYourPasswordHere*$usrpass*" compose.yaml
