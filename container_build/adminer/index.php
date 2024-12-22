@@ -41,6 +41,9 @@ function adminer_object(){
 		  // tables without comments would return empty string and will be ignored by Adminer
 		  return h($tableStatus['Comment']);
 		}
+	 function headers(){
+			echo '<br> <div align="right"><a href="chpass.html">Change Password</a></div>';
+			}
 	 function credentials() {
 		  // server, username and password for connecting to database
 		  return array('mysql', 'mike', getenv('PT_PASS'));
@@ -65,6 +68,9 @@ function adminer_object(){
 		 function edithint($table, $field, $value) {
            if ($field['field']=='devicename'){
               return "  Enter the device's display name here. (only A-Z 0-9 and . _ - allowed)";
+		   }
+		   if ($field['field']=='id'){
+              return "  LEAVE BLANK!";
 		   }
 		   if ($field['field']=='ip'){
               return "  Enter the device's IP or hostname here. (only A-Z 0-9 and . _ - allowed)";
@@ -97,6 +103,6 @@ function adminer_object(){
 	}
 	return new AdminerSoftware;
 	}
-echo '<div align="right"><a href="admin/chpass.html">Change Password</a></div>';
+//echo '<div align="right"><a href="chpass.html">Change Password</a></div>';
 include './editor.php'
 ?>

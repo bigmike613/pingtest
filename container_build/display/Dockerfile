@@ -4,6 +4,7 @@ RUN mkdir /etc/pingtest
 COPY run.ps1 /etc/pingtest/run.ps1
 COPY good.ico /etc/pingtest/good.ico
 COPY bad.ico /etc/pingtest/bad.ico
+COPY dctemp.ps1 /etc/pingtest/dctemp.ps1
 RUN apt-get update
 RUN apt-get install -y wget apt-transport-https software-properties-common
 #RUN source /etc/os-release

@@ -1,19 +1,8 @@
-version: "3.7"
 
 services:
- web:
-  image: miketomasulo/nginx:latest
-  ports:
-   - 80:80
-   - 443:443
-  networks:
-   - backend
-  volumes:
-   - pingtest_vol:/usr/share/nginx/html
-  container_name: PingTest_nginx
-
  pwsh:
-  image: miketomasulo/pingtest:latest
+  image: miketomasulo/pwsh:latest
+  build: ./Container_Build/pwsh
   networks:
    - backend
   volumes:
@@ -29,12 +18,29 @@ services:
   dns:
    - "8.8.8.8"
   privileged: TRUE
-
+ display:
+   image: miketomasulo/display:latest
+   build: ./Container_Build/display
+   networks:
+      - backend
+   volumes:
+      - pingtest_vol:/etc/pingtest_web
+   environment:
+      -  "TZ=America/New_York"
+      -  "PT_PASS=putYourPasswordHere"
+   container_name: PingTest_display
+   entrypoint:
+      - /usr/bin/pwsh
+   command:
+      - /etc/pingtest/run.ps1
+   dns:
+      - "8.8.8.8"
+   privileged: TRUE
  mysql:
   image: miketomasulo/mysql:latest
+  build: ./Container_Build/mysql
   networks:
    - backend
-  command: --default-authentication-plugin=mysql_native_password
   volumes:
    - pingtest_vol_mysql:/var/lib/mysql
   environment:
@@ -44,6 +50,7 @@ services:
 
  adminer:
     image: miketomasulo/adminer:latest
+    build: ./Container_Build/adminer
     environment:
      -  "PT_PASS=putYourPasswordHere"
     networks:
@@ -52,6 +59,7 @@ services:
 
  chart:
     image: miketomasulo/chart:latest
+    build: ./Container_Build/chart
     networks:
      - backend
     environment:
@@ -60,12 +68,24 @@ services:
 
  api:
     image: miketomasulo/api:latest
+    build: ./Container_Build/api
     environment:
      -  "PT_PASS=putYourPasswordHere"
      -  "apikey=putYourPasswordHere"
     networks:
      - backend
     container_name: PingTest_api
+ web:
+  image: miketomasulo/nginx:latest
+  build: ./Container_Build/nginx
+  ports:
+   - 80:80
+   - 443:443
+  networks:
+   - backend
+  volumes:
+   - pingtest_vol:/usr/share/nginx/html
+  container_name: PingTest_nginx
 
 
 networks:
@@ -73,4 +93,3 @@ networks:
 volumes:
  pingtest_vol:
  pingtest_vol_mysql:
- 
