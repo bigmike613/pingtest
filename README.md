@@ -8,8 +8,8 @@ Lastly, you can setup a remote docker container (or any device that runs powersh
 Setup:
 1. git clone https://github.com/bigmike613/pingtest.git
 2. docker compose up -d
-3. follow prompts and answer questions.
-4. add devices - go to http://server/admin , login with the default password of admin/PingTest!!
+3. verify 8 containers are running
+4. add devices - go to http://<serverurl>/admin , login with the default password of admin/PingTest!!
 5. Change admin password click "change password" on admin page.
 6. Adjust settings as needed
 7. (optional) setup SSL. run Config_Scripts/ssl.sh.
