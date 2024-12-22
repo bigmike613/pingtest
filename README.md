@@ -6,7 +6,7 @@ It also shows any devices that were down at least once in the last hour. You can
 Lastly, you can setup a remote docker container (or any device that runs powershell) to ping devices behind a firewall. only port 80 or 443 needs to be open between the remote poller and the main docker setup.
 
 Setup:
-1. download setup.sh to the server (manually or download from github)
+1. git clone https://github.com/bigmike613/pingtest.git
 2. chmod +x ./setup.sh
 3. run as root ./setup.sh
 4. follow prompts and answer questions.
